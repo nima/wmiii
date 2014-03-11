@@ -1,0 +1,42 @@
+#!/bin/bash
+#. sudo  lsof +c 0 -i TCP -s TCP:LISTEN
+declare -i e=0
+declare -i quiet=0
+while getopts  "q" flag; do
+    case ${flag} in
+        q) ((quiet++));;
+        *) ((e++))
+    esac
+done
+
+if [ $# -ne 0 ]; then
+    first=0
+    while read line; do
+        data=( $line )
+        if [ "${data[5]}" == "LISTEN" ]; then
+            symbol=${data[0]:0:1}
+            if [ "${data[3]:0:1}" != 'l' ]; then
+                symbol=${symbol^^}
+            fi
+
+            if [ ${quiet} -eq 1 ]; then
+                test ${first} -eq 0 || printf " "
+                printf "%s:%s:%s" "${symbol}" "${data[3]}" "${data[6]}"
+            elif [ ${quiet} -eq 2 ]; then
+                test ${first} -eq 0 || printf " "
+                printf "%s:%s" ${symbol} ${data[3]}
+            elif [ ${quiet} -eq 3 ]; then
+                printf "%s" ${symbol}
+            fi
+            ((first++))
+        fi
+    done < <($0)
+else
+    netstat -lnpAinet 2>/dev/null\
+        |sed -e 's/ \{27\}/ NONE /' -e 's/0\.0\.0\.0/*/g'\
+        |grep -E '^(udp|raw|tcp)' --color\
+        |sed 's/127.0.0.1/l/g'\
+        |column -t
+fi
+
+exit $e

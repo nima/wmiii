@@ -1,0 +1,72 @@
+#!/bin/bash
+. "${WMII_CONFPATH%%:*}/statusbar.conf"
+THEME=SW
+
+requires recollindex || exit 97
+
+if [ "$1" == "--reindex" ]; then
+    DATA="rc"
+    sb_write_cache "${DATA}"
+
+    cd /srv/resourcez
+    #INBOX/INBOX.djv
+    #INBOX/INBOX.djvu
+    DIRS=(
+        papers phrack bookshelf CIA
+        ebooks-{ai,apps,db,markup,maths,networking,os,other,programming,scm}
+        ebooks-{security,web,thinking-in}
+        INBOX/INBOX.bib INBOX/INBOX.chm INBOX/INBOX.nb INBOX/INBOX.html
+        INBOX/INBOX.pdf INBOX/INBOX.ppt INBOX/INBOX.ps INBOX/INBOX.index
+    )
+
+    total=$[2 * ${#DIRS[@]} + 2]
+    index=0
+
+    for d in ${DIRS[@]}; do
+        test $(sb_state ${MOUSE_M}) -eq 1 || break
+
+        ((index++))
+        DATA=$(printf "[rc %.0f%% (%s:-)]" $(echo 100*${index}/${total}|bc -l) "$d")
+        sb_write_cache "${DATA}"
+        find /srv/resourcez/$d/|recollindex -e
+        sync
+
+        ((index++))
+        DATA=$(printf "[rc %.0f%% (%s:+)]" $(echo 100*${index}/${total}|bc -l) "$d")
+        sb_write_cache "${DATA}"
+        find /srv/resourcez/$d/|recollindex -i
+        sync
+    done
+
+    if [ $(sb_state ${MOUSE_M}) -eq 1 ]; then
+        ((index++))
+        DATA=$(printf "[rc %.0f%% (s:+)]" $(echo 100*${index}/${total}|bc -l))
+        recollindex -s english
+    fi
+
+    if [ $(sb_state ${MOUSE_M}) -eq 1 ]; then
+        ((index++))
+        DATA=$(printf "[rc %.0f%% (S:+)]" $(echo 100*${index}/${total}|bc -l))
+        recollindex -S
+    fi
+
+    if [ $(sb_state ${MOUSE_M}) -eq 1 ]; then
+        DATA="rc 100%"
+    else
+        DATA="rc ---%"
+    fi
+    sb_write_cache "${DATA}"
+elif sb_ready 1; then
+    lck ${LOCK_SB_MODULE} on
+    case ${BUTTON} in
+        ${MOUSE_M})
+            case $(sb_state ${BUTTON}) in
+                0) THEME=DULL; sb_write_cache "rc" ;;
+                1) THEME=SW; ( $0 --reindex >/dev/null 2>&1 )& ;;
+            esac
+            sleep 1;
+        ;;
+    esac
+    lck ${LOCK_SB_MODULE} off
+fi
+sb_read_cache "rc"

@@ -1,0 +1,47 @@
+#!/bin/bash
+. "${WMII_CONFPATH%%:*}/statusbar.conf"
+THEME=SW
+SYMBOL=2702
+
+profiles + DEC || exit 96
+requires jira || exit 97
+
+if sb_ready 15; then
+    lck ${LOCK_SB_MODULE} on
+
+    e=0
+    if [ ! -e ${SB_STAGE_F} ] || ! sb_urgent; then
+        jira > ${SB_STAGE_F}.staged && mv ${SB_STAGE_F}.staged ${SB_STAGE_F}
+    fi
+
+    if [ $e -eq 0 ]; then
+        declare -a tickets
+        declare -i i=0
+        if [ -s ${SB_STAGE_F} ]; then
+            while read line; do
+                IFS='|' read sym tid comments reporter comp who when ago score <<< "${line}"
+                tickets[$i]=$(
+                    printf "%s[%s#%s@%s] by %s (%s, %s) [score=%s]: wm_tag_focus %s"\
+                        "${tid}" "${sym}" "${comp}" "${comments}" "${reporter}"\
+                        "${who}" "${ago//:/_}" "${score}"\
+                        "${tid/-/_}"
+                )
+                ((i++))
+            done < ${SB_STAGE_F}
+        else
+            tickets[0]="...processing...: echo"
+        fi
+
+        case ${BUTTON} in
+            ${MOUSE_R}) wm_context_menu "${tickets[@]}" ;;
+        esac
+
+        DATA="jira:${#tickets[@]}"
+    else
+        sb_escalate CRIT
+        DATA="jira:no-connection"
+    fi
+    sb_write_cache "${DATA}"
+    lck ${LOCK_SB_MODULE} off
+fi
+sb_read_cache

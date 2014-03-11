@@ -1,0 +1,123 @@
+#!/bin/bash
+
+#. Make sure you have the following line in your fstab!
+#shm  ${WMII_SHM:-/dev/shm/wmii} tmpfs defaults,user,noexec,nodev,nosuid,noauto,noatime,size=512M,nr_inodes=8k,mode=770 0 0
+: ${PROFILE?}
+
+declare -g -r WMII_ROOT="${HOME}/.wmii/"
+export WMII_ROOT
+test -d ${WMII_ROOT} || exit 1
+
+source ${WMII_ROOT}/core.conf
+: ${WMII_LOG?}
+: ${WMII_SHM?}
+: ${WMII_CACHE?}
+: ${WMII_CACHE_SHM?}
+: ${WMII_CACHE_SHM_PERSIST?}
+requires lck awk sed gxmessage
+
+trap cleanup SIGTERM
+function cleanup() {
+    printf "Cleanup..."
+    for proc in wmiirc tail xbindkeys mocp; do
+        for signal in TERM KILL; do
+            if pgrep ${proc} > /dev/null; then
+                pkill -${signal} ${proc}
+                printf "."
+                sleep 0.4
+            fi
+        done
+    done
+    printf "Done\n"
+
+    printf "Syncing back cache to disk..."
+    cp ${WMII_LOG} /var/tmp/
+    rsync -qa --delete ${WMII_CACHE_SHM}/ ${WMII_CACHE_SHM_PERSIST?}/
+    if [ $? -eq 0 ]; then
+        printf "Done\n"
+    else
+        printf "Failed\n"
+    fi
+
+    printf "Unmounting wmii shm...["
+    while [ -d ${WMII_SHM} ]; do
+        perm=$(stat --printf '%a' ${WMII_SHM})
+        if [ $perm -ne 0 ]; then
+            printf "u"
+            umount ${WMII_SHM} 2>/dev/null
+            sleep 1
+        else
+            printf "r"
+            #unlink ~/cache
+            #ln -sf ${WMII_CACHE_SHM_PERSIST}/ ~/cache
+            rmdir ${WMII_SHM}
+        fi
+    done
+
+    echo "]...Done"
+}
+
+e=0
+printf "Starting X..."
+if [ ! -d ${WMII_SHM} ]; then
+    printf "...\n"
+
+    export DISPLAY=:0
+
+    printf "Checking for ${WMII_SHM} in /etc/fstab..."
+    grep ${WMII_SHM} /etc/fstab|awk '{if($1~/^shm$/){exit 0}else{exit 1}}'
+    if [ $? -eq 0 ]; then
+        printf "Done\n"
+    else
+        printf "Failed\n"
+        exit 1
+    fi
+
+    if [ ! -d "${HOME}/.wmii/" ]; then
+        pushd ${HOME}/.wmii >/dev/null #. {{
+        if git remote update >/dev/null 2>&1; then
+            change=$(git status -s -uno|wc -l)
+            #git ls-remote origin -h refs/heads/master
+            #git rev-list --max-count=1 origin/master
+            #git status -s -u no
+            if [ ${change} -gt 0 ]; then
+                git pull
+                make
+            fi
+        fi
+        popd >/dev/null #. }}
+    fi
+
+    printf "Mounting SHM..."
+    pushd ${HOME} >/dev/null #. {{
+    mkdir -p ${WMII_SHM}
+    chmod 000 ${WMII_SHM}
+    mount ${WMII_SHM}
+    l=/var/tmp/$(basename ${WMII_LOG})
+    test -f $l && tail -n 1000 $l > ${WMII_LOG} || touch ${WMII_LOG}
+    chmod 600 ${WMII_LOG}
+    printf "Done\n"
+
+    printf "Syncing cache to memory..."
+    sync
+    rsync -qa ${WMII_CACHE_SHM_PERSIST}/ ${WMII_CACHE_SHM}/
+    #unlink ~/cache
+    #ln -sf ${WMII_CACHE_SHM}/ ~/cache
+    printf "Done\n"
+
+    printf "About to launch wmii..."
+    startx -- -nolisten tcp 2>&1 | plogger ERR startx
+    printf "Done\n"
+    cleanup
+
+    sync
+    echo "Your processes as of the exit from wmii..."
+    pstree -u $(whoami)
+
+    popd >/dev/null #. }}
+else
+    printf "Failed\n"
+    e=1
+fi
+
+exit $e

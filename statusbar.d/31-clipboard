@@ -1,0 +1,98 @@
+#!/bin/bash
+. "${WMII_CONFPATH%%:*}/statusbar.conf"
+THEME=SW
+SYMBOL=2702
+SYMBOL=2328
+
+requires xsel xclip || exit 97
+
+#. Private Functions {{
+_xclip_out() {
+    xclip -out -selection ${1:-p} 2>/dev/null
+    return $?
+}
+
+_xclip_clear() {
+    for cb in p s c b; do
+        xsel -t 100 -n -c -p >/dev/null
+        xsel -t 100 -n -c -s >/dev/null
+        xsel -t 100 -n -c -b >/dev/null
+    done
+}
+#. }}
+
+if sb_ready 1; then
+    lck ${LOCK_SB_MODULE} on
+    case ${BUTTON} in
+        ${MOUSE_R})
+            declare -A buffers
+            for buffer in p c b s; do
+                buffers[${buffer}]=$(_xclip_out ${buffer}|wc -c)
+            done
+
+            declare -A copy
+            for src in ${!buffers[@]}; do
+                for dst in ${!buffers[@]}; do
+                    if [ ${src} != ${dst} -a ${buffers[${src}]} -gt 0 ]; then
+                        [ ${buffers[${dst}]} -eq 0 ] || dst=${dst^}
+                        copy[${src}${dst}]="${src^}->${dst}:_xclip_out ${src} | xclip -selection ${dst} -i;"
+                    fi
+                done
+            done
+            wm_context_menu "Clear:_xclip_clear;" "${copy[@]}"
+        ;;
+        ${MOUSE_M})
+            _xclip_out c\
+                | xclip -d ${DISPLAY} -selection p -in
+        ;;
+        ${MOUSE_S})
+            _xclip_out p\
+                | tr -d '\n'\
+                | sed -e 's/ \+/ /g'\
+                | xclip -d ${DISPLAY} -selection c -in
+        ;;
+    esac
+
+    THEME=DULL
+    declare -A DATUM
+    for cb in p s c b; do
+        count=$(_xclip_out ${cb}|wc -c)
+        DATUM[${cb}]=${count}
+        test ${count} -eq 0 || THEME=SW
+    done
+
+    DATA=
+    if [ "${THEME}" != "DULL" ]; then
+        XTRA=
+        if [ -f /srv/autonomy/insecurity/data/iso3166-1.csv ]; then
+            if [ ${DATUM[p]} -eq 2 ]; then
+                CC=$(_xclip_out)
+                XTRA=" $(
+                    awk -F\;\
+                        '$2~/'${CC^^}'/{print(tolower($1))}'\
+                        /srv/autonomy/insecurity/data/iso3166-1.csv
+                )"
+            fi
+        fi
+
+        if [ $(sb_state ${MOUSE_L}) -eq 1 ]; then
+            for cb in p s c b; do
+                if [ ${DATUM[${cb}]} -gt 0 ]; then
+                    DATA="${DATA} ${cb^^}:${DATUM[${cb}]}"
+                fi
+            done
+        else
+            for cb in p s c b; do
+                if [ ${DATUM[${cb}]} -gt 0 ]; then
+                    DATA="${DATA}${cb^^}"
+                else
+                    DATA="${DATA}${cb}"
+                fi
+            done
+        fi
+        DATA="${DATA}${XTRA}"
+    fi
+    sb_write_cache "${DATA}"
+    lck ${LOCK_SB_MODULE} off
+fi
+sb_read_cache

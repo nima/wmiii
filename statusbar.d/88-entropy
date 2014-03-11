@@ -1,0 +1,23 @@
+#!/bin/bash
+. "${WMII_CONFPATH%%:*}/statusbar.conf"
+THEME=HW
+SYMBOL=2621
+
+requires lck cat || exit 97
+
+if sb_ready 1; then
+    lck ${LOCK_SB_MODULE} on
+    DATA="$(cat /proc/sys/kernel/random/entropy_avail)"
+
+    if [ ${DATA} -lt 50 ]; then
+        sb_escalate WARN
+    elif [ ${DATA} -lt 100 ]; then
+        sb_escalate NOTE
+    elif [ ${DATA} -gt 150 ]; then
+        sb_escalate GOOD
+    fi
+
+    sb_write_cache "${DATA}"
+    lck ${LOCK_SB_MODULE} off
+fi
+sb_read_cache

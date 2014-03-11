@@ -1,0 +1,121 @@
+#!/bin/bash
+. "${WMII_CONFPATH%%:*}/statusbar.conf"
+THEME=HW
+SYMBOL=2665
+
+requires acpi || exit 97
+
+if sb_ready 7; then
+    lck ${LOCK_SB_MODULE} on
+    declare -A DATUM
+
+    #. User Processes | User Threads / Total Processes | Total Threads
+    DATUM[p]="usr:$(ps -fu ${USER}|wc -l)/$(ps -fLu ${USER}|wc -l)~ sys:$(ps h -eo '%p'|wc -l)/$(ps h -eLo '%p'|wc -l)~"
+
+    #. Cores / Speed
+    cores=$(grep -c '^processor' /proc/cpuinfo)
+    speed=$(awk -F' *: *' '$1~/cpu MHz/{print int($2)"MHz";exit}' /proc/cpuinfo)
+    DATUM[s]="${cores}x${speed}"
+
+    #. Load Average / %LA
+    la=$(awk '{print $1}' /proc/loadavg)
+    lapct=$(printf "%d" $(echo "${la} * 100 / ${cores}"|bc))
+    DATUM[l]="la:${la}/${lapct}%"
+
+    if [ ${lapct} -eq 0 ]; then
+        sb_escalate GOOD
+    elif [ ${lapct} -gt 5 ]; then
+        sb_escalate INFO
+    elif [ ${lapct} -gt 15 ]; then
+        sb_escalate NOTE
+    elif [ ${lapct} -gt 25 ]; then
+        sb_escalate WARN
+    elif [ ${lapct} -gt 50 ]; then
+        sb_escalate CRIT
+    fi
+
+    t=0
+    temp='0'
+    stat='unknown'
+    ACPI=$(which acpi 2>/dev/null)
+    if [ $? -eq 0 ]; then
+        ${ACPI} -t > ${SB_STAGE_F}
+        if [ -s ${SB_STAGE_F} ]; then
+            declare -a stats=( "$(awk -F '[ :,]+' '{print$3}' ${SB_STAGE_F})" )
+            declare -a temps=( "$(awk -F '[ :,]+' '{print$4}' ${SB_STAGE_F})" )
+            declare -a ts=( $(printf "%.0f\n" ${temps[@]}) )
+            for stat in ${stats[@]}; do
+                if [ "${stat}" != "ok" ]; then
+                    if [ -n "${stat}" ]; then
+                        sb_escalate CRIT
+                    else
+                        sb_escalate WARN
+                    fi
+                fi
+            done
+
+            if [ ${lapct} -gt 5 ]; then
+                for t in ${ts[@]}; do
+                    if [ $t -ge 70 ]; then
+                        sb_escalate CRIT
+                    elif [ $t -ge 60 ]; then
+                        sb_escalate WARN
+                    fi
+                done
+                unset t
+            fi
+
+            DATUM[t]="[${ts[@]}]°C"
+        fi
+    fi
+
+    cpudata=( $(ps -eo 'pid,state,pcpu,cputime,comm'|${WMII_CONFPATH%%:*}/statusbar.d/ps.awk) )
+    if [ ${#cpudata} -gt 0 ] && [ ${cpudata[0]} -gt 0 ]; then
+        if [ ${lapct} -gt 5 ]; then
+            sb_escalate ${cpudata[1]}
+        fi
+        i=0
+        declare -a ps
+        topargs=
+        set ${cpudata[@]}
+        shift 2
+        for p in $*; do
+            set ${p//:/ }
+            #. FIXME - first entry from ps.awk is junk?
+            if [ $1 -ne 0 ]; then
+                topargs="${topargs} -p${1}"
+                if [ $(sb_state ${MOUSE_L}) -eq 1 ]; then
+                    ps[i]="<$2 $3 $4% $5s>"
+                else
+                    ps[i]="$2"
+                fi
+            fi
+            ((i++))
+        done
+        if [ $(sb_state ${MOUSE_L}) -eq 1 ]; then
+            DATUM[c]="${ps[@]}"
+        else
+            DATUM[c]="$(echo ${ps[@]}|tr -d ' ')"
+        fi
+        if [ -n "${topargs}" ]; then
+            case ${BUTTON} in
+                ${MOUSE_M}) xterm -e "top ${topargs}";;
+            esac
+        fi
+    fi
+
+    DATA=
+    if [ $(sb_state ${MOUSE_L}) -eq 1 ]; then
+        for k in l p t c s; do
+            if [ -n "${DATUM[${k}]}" ]; then
+                DATA="${DATA} ${DATUM[${k}]}"
+            fi
+        done
+    else
+        DATA="${DATUM[l]}"
+    fi
+
+    sb_write_cache "${DATA}"
+    lck ${LOCK_SB_MODULE} off
+fi
+sb_read_cache

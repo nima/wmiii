@@ -1,0 +1,86 @@
+#!/bin/bash
+. "${WMII_CONFPATH%%:*}/statusbar.conf"
+THEME=NW
+SYMBOL=21AF
+
+requires dig socat || exit 97
+
+function speed_check() {
+    timeout=99
+
+    exec 4>&2 2>&-
+
+    dig +short +tries=1 +time=1 www.google.com >/dev/null
+    if [ $? -eq 0 ]; then
+        declare -l
+        if [ -n "${http_proxy}" ]; then
+            proxy=$(echo "${http_proxy}" | sed 's/^https\?:\/\///')
+            proxy_host=$(echo "${proxy}" | awk -F: '{print$1}')
+            proxy_port=$(echo "${proxy}" | awk -F: '{print$2}')
+        fi
+        for t in 1 2 3 4 5; do
+            if [ -n "${http_proxy}" ]; then
+                #. FIXME
+                proxy_port=80
+                echo -ne 'GET http://www.google.com.au/ HTTP/1.1\r\n\r\n'\
+                    | socat "TCP:${proxy_host}:${proxy_port-80},connect-timeout=${t}" STDIN
+                #. TODO
+                #socat "PROXY:${proxy_host}:www.google.com:80,proxyport=${proxy_port:=80},connect-timeout=$timeout" /dev/null
+                #if [ $? -eq 0 ]; then
+                #    printf "GET http://www.google.com.au/ HTTP/1.1\r\n\r\n" | socat "TCP:${proxy_host}:${proxy_port}" /dev/null
+                #fi
+            else
+                socat "TCP:www.google.com:80,connect-timeout=${t}" /dev/null
+            fi
+            if [ $? -eq 0 ]; then
+                timeout=${t}
+                break
+            fi
+        done
+    fi
+
+    exec 2>&4 4>&-
+
+    return ${timeout}
+}
+
+if sb_ready 60; then
+    lck ${LOCK_SB_MODULE} on
+
+    speed_check
+    timeout=$?
+    if [ ${timeout} -ne 99 ]; then
+        if [ $(sb_state ${MOUSE_L}) -eq 1 ]; then
+            rtt=$(ping -q -a -W1 -c5 -w5 google.com|awk -F'[= /]+' '$1~/rtt/{printf("(%f+%f+%f)/3\n",$6,$7,$8)}'|bc)
+            DATA=${rtt}ms
+            if [ ${rtt} -lt 50 ]; then
+                DATA="$(myip) 8)"; sb_escalate GOOD
+            elif [ ${rtt} -lt 100 ]; then
+                DATA="$(myip) :)";
+            elif [ ${rtt} -lt 500 ]; then
+                DATA="$(myip) :/";
+            elif [ ${rtt} -lt 1000 ]; then
+                DATA="$(myip) :|"; sb_escalate WARN
+            elif [ ${rtt} -lt 5000 ]; then
+                DATA="$(myip) 8("; sb_escalate CRIT
+            else
+                DATA="$(myip) ?)";
+            fi
+        else
+            case ${timeout} in
+                1) DATA='H'; sb_escalate GOOD ;;
+                2) DATA='h'; ;;
+                3) DATA='m'; sb_escalate NOTE ;;
+                4) DATA='l'; sb_escalate WARN ;;
+                5) DATA='L'; sb_escalate WARN ;;
+            esac;
+        fi
+    else
+        sb_escalate CRIT
+        DATA='No Internetz!'
+    fi
+
+    sb_write_cache "${DATA}"
+    lck ${LOCK_SB_MODULE} off
+fi
+sb_read_cache

@@ -1,0 +1,21 @@
+#!/bin/bash
+. "${WMII_CONFPATH%%:*}/statusbar.conf"
+THEME=NW
+SYMBOL=25f2
+
+requires lck || exit 97
+
+if sb_ready 10; then
+    lck ${LOCK_SB_MODULE} on
+
+    IP=$(ip tun0)
+    if [ -z "${IP}" ]; then
+        SB_ALERT=DULL
+    else
+        DATA="${IP}"
+    fi
+
+    sb_write_cache "${DATA}"
+    lck ${LOCK_SB_MODULE} off
+fi
+sb_read_cache

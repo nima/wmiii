@@ -1,0 +1,114 @@
+#!/bin/less
+#. Instructions:
+#.     * Drop this directory as-is into ~/.wmii
+#.     * Run make install
+#.     * Define PROFILE in your profile to HOME, WORK, or whatever
+#.     * Run ~/bin/starty
+
+: FILES=<<!
+
+   core.conf________________________________________starty*
+     \
+      \                statusbar.conf__
+       \__user.conf     /              \
+           / \         /  _______statusbar.d/*__
+          /   \       /  /                      \
+         /     \__base.conf                      \
+        /            \ \ \__________________wmii.conf_____wmiirc*
+       /              \ \                    // ////
+ screens.conf          \ \___events.conf____// ////
+                        \                   / ////
+                         \___@keys.conf____/ ////
+                                            ////
+                         @colrules.conf____////
+                          @tagcols.conf____///
+                             @tags.conf____//
+                            @rules.conf____/
+
+events.conf      wmii event hander functions               #. recached on update
+tagcols.conf     wmii per-tag color themes                 #. not cached
+tags.conf        wmii tag/application mappings             #. not cached
+
+rules.conf       $(wmiir read /rules) data                 #. recached on update
+colrules.conf    $(wmiir read /colrules) data              #. recached on update
+
+statusbar.d/*    statusbar modules                         #. not cached
+statusbar.conf   statusbar bootstrap code                  #. not cached
+
+user.conf        User configuration variables for wmii     #. recached on update
+base.conf        Base configuration variables for wmii     #. recached on update
+keys.conf        defines which key presses wmii listens to #. recached on update
+wmii.conf        wmii system settings                      #. recached on update
+wmiirc*          wmii main loop                            #. restart required on change
+!
+
+: LOOPS=<<!
+_mn_bootstrap() {
+    mn_bootstrap() {
+        #. Look after the alerts statusbar lbar item:
+        _mn_sb_alerter_clear_loop() {
+            LOOP()
+        }
+
+        #. Look after the rbar modules:
+        mn_sb_loop() {
+            WM_SB_MODULES=
+            _mn_sb_setup() {
+                _mn_sb_rehash_modules() {
+                    WM_SB_MODULES=( ... )
+                }
+            }
+            LOOP()
+            _mn_sb_cleanup() {
+                $WM_SB_MODULES
+            }
+        }
+
+        mn_rehash keys rules colrules events
+
+        e_CreateTag ${FIRST_TAG_ID}
+
+        wmiir xwrite /event Start wmiirc
+    }
+}
+
+_event_loop() {
+    LOOP {
+        mn_event_handler {
+            mn_process_key || mn_quit
+            mn_rehash
+        }
+    }
+}
+!
+################################################################################
+#. Glossary
+#.
+#. <tag-id> or <tid>: The tag name, which appears in the statusbar.
+#. <tag-key>: The first column of `tags.conf'
+#. dynamic tagging: Tags that are generated programatically, and not indivudually
+#. set up in `tags.conf', but instead via the special <tag-key> `%'
+
+################################################################################
+#. TODO
+#. for ((a=1, b=1; a <= LIMIT ; a++, b++)); do  echo "$a-$b "; done
+
+#. ls crap|cat|ls bob
+#. echo ${PIPESTATUS[@]}
+
+#. $SHLVL
+#. $TMOUT
+
+#. until instead of while
+
+#. continue N, break N
+
+#. PS3 and select loop
+
+#. hash
+
+#. use command to disable function and aliases
+#. use builtin to use shell builtin
+#. use enable -a to see what builtins are enabled at the moment
+
+#. cat, tac, rev

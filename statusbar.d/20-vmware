@@ -1,0 +1,39 @@
+#!/bin/bash
+. "${WMII_CONFPATH%%:*}/statusbar.conf"
+THEME=SW
+SYMBOL=2263
+
+requires /etc/init.d/vmware || exit 97
+
+if sb_ready 15; then
+    lck ${LOCK_SB_MODULE} on
+    VMWARE=( $(vmrun list) )
+
+    case ${BUTTON} in
+        ${MOUSE_M})
+            case $(sb_state ${BUTTON}) in
+                0) sudo /etc/init.d/vmware stop  >/dev/null 2>&1;;
+                1) sudo /etc/init.d/vmware start >/dev/null 2>&1;;
+            esac
+        ;;
+    esac
+
+    if [ ${#VMWARE[@]} -gt 0 ]; then
+        for item in ${VMWARE[@]}; do
+            if echo ${item}|grep -qE 'vmx$'; then
+                DATA="${DATA} $(echo ${item}|xargs basename|sed -e 's/.vmx//')"
+            fi
+        done
+    fi
+
+    DATA=
+    if [ -n "${DATA}" ]; then
+        DATA="${DATA}"
+    fi
+
+    pgrep ^vmware > /dev/null || SB_ALERT=DULL
+
+    sb_write_cache "${DATA}"
+    lck ${LOCK_SB_MODULE} off
+fi
+sb_read_cache

@@ -1,0 +1,43 @@
+#!/bin/bash
+. "${WMII_CONFPATH%%:*}/statusbar.conf"
+THEME=HW
+SYMBOL=2756
+
+requires sudo skdump || exit 97
+
+if sb_ready 90; then
+    lck ${LOCK_SB_MODULE} on
+    cd /dev
+    DATA=
+    for hdd in sd?; do
+        is_smart=$(sudo -n skdump --can-smart /dev/${hdd})
+        test "${is_smart}" == "YES" || continue
+
+        if [ $(sb_state ${MOUSE_L}) -eq 1 ]; then
+            t=$((($(sudo -n skdump --temperature /dev/${hdd}) - 273125)/1000))
+            o=$(sudo skdump --overall /dev/${hdd})
+            DATA="${DATA} ${hdd}"
+            DATA="${DATA}:${o}"
+
+            test $t -eq -273 || DATA="${DATA}:${t}°C"
+
+            c=$(sudo -n skdump --power-cycle /dev/${hdd})
+            test -z "$c"     || DATA="${DATA}:${c}~"
+
+            b=$(sudo -n skdump --bad /dev/${hdd})
+            test -z "$b"     || DATA="${DATA}:${b}B"
+
+            if [ $t -gt 60 -o "$o" != "GOOD" ]; then
+                sb_escalate CRIT
+            elif [ $t -gt 40 ]; then
+                sb_escalate WARN
+            fi
+        else
+            DATA="${DATA}${hdd/sd/}"
+        fi
+    done
+
+    sb_write_cache "${DATA}"
+    lck ${LOCK_SB_MODULE} off
+fi
+sb_read_cache

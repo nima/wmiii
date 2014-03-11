@@ -1,0 +1,68 @@
+#!/bin/bash
+. "${WMII_CONFPATH%%:*}/statusbar.conf"
+THEME=SW
+SYMBOL=1699 #. Grid
+
+requires lck || exit 97
+
+function sb_tmux_menu() {
+    local session
+    local tab
+    local pane
+    if [ $# -eq 0 ]; then
+        tmux list-sessions\
+            -F '#{session_name}#{?session_attached,*,}:#{session_name}'
+    elif [ $# -eq 1 ]; then
+        session=$1
+        tmux list-windows -t ${session}\
+            -F '#{session_name}->#{window_name}#{?window_active,*,}:#{window_name}'
+
+    elif [ $# -eq 2 ]; then
+        session=$1
+        tab=$2
+        tmux list-panes -t ${session}:${tab}\
+            -F '#{session_name}->#{window_name}->#{pane_index}#{?pane_active,*,}:#{pane_id}'
+    elif [ $# -eq 3 ]; then
+        session=$1
+        tab=$2
+        pane=$3
+
+        tmux select-window -t "$session:$tab"
+        tmux select-pane -t "$session:$tab.$pane"
+        tmux display-panes
+    fi
+}
+
+if sb_ready 60; then
+    lck ${LOCK_SB_MODULE} on
+
+    DATA=
+    case $(sb_state ${MOUSE_L}) in
+        0) DATA="$(tmux list-sessions|wc -l)";;
+        1) DATA="$(tmux list-sessions -F '#{session_name}#{?session_attached,*,}')";;
+    esac
+
+    case ${BUTTON} in
+        ${MOUSE_R})
+            s="$(wmii9menu -- $(sb_tmux_menu))"
+            if [ ${#s} -gt 0 ]; then
+                attached=$(tmux list-sessions -F '#{session_name}:#{session_attached}'|awk -F: '$1~/'${s}'/{print$2}')
+                if [ $attached -eq 1 ]; then
+                    t="$(wmii9menu -- $(sb_tmux_menu $s))"
+                    if [ ${#t} -gt 0 ]; then
+                        p="$(wmii9menu -- $(sb_tmux_menu $s $t))"
+                        if [ ${#t} -gt 0 ]; then
+                            sb_tmux_menu $s $t $p
+                        fi
+                    fi
+                else
+                    terminal -T "tmux-${s}" -e "tmux attach-session -t ${s}" && disown
+                fi
+            fi
+        ;;
+    esac
+
+    sb_write_cache "${DATA}"
+    lck ${LOCK_SB_MODULE} off
+fi
+sb_read_cache

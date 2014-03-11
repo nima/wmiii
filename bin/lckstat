@@ -1,0 +1,13 @@
+#!/bin/bash
+source ${WMII_ROOT-~/.wmii}/base.conf
+
+tput sc
+while [ 0 ]; do
+    for l in ${!LOCK_*}; do
+        printf "%16s[%03d]: " ${l##LOCK_} ${!l}
+        lck ${!l} status|awk '{printf$1"/"$2}'; 
+    done
+    echo
+    sleep ${1:-5}
+    tput rc
+done

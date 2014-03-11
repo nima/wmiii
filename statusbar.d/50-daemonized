@@ -1,0 +1,32 @@
+#!/bin/bash
+. "${WMII_CONFPATH%%:*}/statusbar.conf"
+THEME=PS
+
+requires atomicles || exit 97
+
+if sb_ready 12; then
+    lck ${LOCK_SB_MODULE} on
+    case ${BUTTON} in
+        ${MOUSE_M})
+            case $(sb_state ${BUTTON}) in
+                0) atomicles stop  > /dev/null 2>&1;;
+                1) atomicles start > /dev/null 2>&1;;
+            esac
+        ;;
+    esac
+
+    DATA=$(
+        atomicles status\
+            |awk '$6~/Alive/{if(NR>2){printf","};printf(tolower($1))}'
+    )
+
+    if [ -n "${DATA}" ]; then
+        DATA=":${DATA}"
+    else
+        SB_ALERT=DULL
+    fi
+
+    sb_write_cache "D${DATA}"
+    lck ${LOCK_SB_MODULE} off
+fi
+sb_read_cache

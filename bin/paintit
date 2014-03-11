@@ -1,0 +1,101 @@
+#!/usr/bin/env python
+
+import sys, os, commands
+from hashlib import md5
+from time import time, ctime
+from commands import getstatusoutput
+
+#IMGUR_CLIENT_ID=4514c1e35271b56
+#IMGUR_CLIENT_SECRET=4fd36a52d193134011cea14cc3756d50082570eb
+api_key = 'c2cbf6d04591206a09acf7b98766b418558da979'
+#api_key = '42d264a2354cf4c8c378b86fc5a3a034'
+
+proxies = {}
+if 'http_proxy' in os.environ:
+    proxies['http'] = os.environ['http_proxy']
+
+'''
+{
+    u'error': {
+        u'format': u'json',
+        u'message': u'Invalid API Key',
+        u'method': u'post',
+        u'parameters': u'image = iVBORw0KGgoAAAANSUhEUgAAA9YAAACyCAIAAAAoBsA0AAAgAElEQVR4nHS9bbbkuK4jClCOrDpr9bjehN5geqS9uirD...',
+        u'request': u'//2/upload.json'
+    }
+}
+
+{
+    u'upload': {
+        u'image': {
+            u'animated': u'false',
+            u'bandwidth': 0,
+            u'caption': None,
+            u'datetime': u'2012-12-13 03:10:31',
+            u'deletehash': u'WSvOeAX32Q3LRlJ',
+            u'hash': u'TsJKP',
+            u'height': 178,
+            u'name': None,
+            u'size': 172403,
+            u'title': u'apitest',
+            u'type': u'image/png',
+            u'views': 0,
+            u'width': 982
+        },
+        u'links': {
+            u'delete_page': u'http://imgur.com/delete/WSvOeAX32Q3LRlJ',
+            u'imgur_page': u'http://imgur.com/TsJKP',
+            u'large_thumbnail': u'http://i.imgur.com/TsJKPl.jpg',
+            u'original': u'http://i.imgur.com/TsJKP.png',
+            u'small_square': u'http://i.imgur.com/TsJKPs.jpg'
+        }
+    }
+}
+'''
+
+
+def upload_autonomy(file):
+    BIN = "src.autonomy.net.au:/var/www/nima/sites/src.autonomy.net.au/pub/imagebin/%s"
+    URI = "http://src.autonomy.net.au/imagebin/%s\n"
+    filename = (
+        "%s-%s"%(
+        md5(file+str(time())).hexdigest(),
+        os.path.basename(file)
+        )
+    ).replace(" ", "_")
+    cmd = "rsync -aL '%s' rasputin@%s"%(file, BIN%filename)
+    e, _ = commands.getstatusoutput(cmd)
+    if e == 0:
+        sys.stdout.write("%s" % (URI%filename))
+    else:
+        sys.stdout.write("Failed to paint `%s'\n"%filename)
+
+def upload(file):
+    import requests, json, base64
+
+    f = open(file, 'rb')
+    binary_data = f.read()
+    b64image = base64.b64encode(binary_data)
+    f.close()
+
+    payload = {
+        'key' : api_key,
+        'image': b64image,
+        'title': 'NOMAD: %s' % ctime(),
+    }
+    url = r'http://api.imgur.com/2/upload.json'
+    r = requests.post(url, data=payload, proxies=proxies)
+
+    results = json.loads(r.text)
+    if 'upload' in results.keys():
+        print(results['upload']['links']['imgur_page'])
+
+e=1
+if len(sys.argv) > 1:
+    for file in sys.argv[1:]:
+        if os.path.exists(file):
+            e=upload(file)
+else:
+    sys.stdout.write("Usage: %s <image-1> [<image-2 [...]]\n"%os.path.basename(sys.argv[0]))
+
+sys.exit(e)

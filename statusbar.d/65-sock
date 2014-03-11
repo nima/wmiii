@@ -1,0 +1,44 @@
+#!/bin/bash
+. "${WMII_CONFPATH%%:*}/statusbar.conf"
+THEME=NW
+SYMBOL=2601 #. Cloud
+
+requires listening || exit 97
+
+set -f
+if sb_ready 1; then
+    lck ${LOCK_SB_MODULE} on
+    c=0
+
+    holes="$(sudo $(which listening) -q)"
+    DATA=${holes}
+    if [ $(sb_state ${MOUSE_L}) -ne 1 ]; then
+        DATA="$(sudo $(which listening) -qqq)"
+    fi
+
+    IFS=, read -a config <<< "${SB_CONF_SOCK[${PROFILE}]}"
+    for hole in ${holes}; do
+        IFS=: read -a subdata <<< "${hole}"
+        iface=${subdata[1]}
+        port=${subdata[2]}
+
+        whitelist=0
+        for whiteport in ${config[@]}; do
+            if [ ${port} -eq ${whiteport} ]; then
+                whitelist=1
+                break
+            fi
+        done
+
+        if [ ${whitelist} -ne 1 ]; then
+            if [ "${iface}" == "*" ]; then
+                sb_escalate CRIT
+            elif [ "${iface}" != "l" ]; then
+                sb_escalate WARN
+            fi
+        fi
+    done
+    sb_write_cache "${DATA}"
+    lck ${LOCK_SB_MODULE} off
+fi
+sb_read_cache

@@ -1,0 +1,8 @@
+reset:
+	chmod 600 [0-9][0-9]-*
+	chmod 700 09-volume 10-muzik 11-dropbox
+	chmod 700 31-clipboard 33-nc 35-screen 36-jira
+	chmod 700 50-daemonized
+	chmod 700 60-eth 62-tmux 65-sock 68-vpn 69-internetz
+	chmod 700 80-mem 81-cpu 88-entropy 82-hdd
+	chmod 700 99-time

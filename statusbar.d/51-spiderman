@@ -1,0 +1,44 @@
+#!/bin/bash
+. "${WMII_CONFPATH%%:*}/statusbar.conf"
+THEME=SW
+SYMBOL=2638
+
+requires chrome || exit 97
+
+mkdir -p ~/cache
+
+function browze() {
+    cd
+    i=1
+    while [ -d cache/gc-anonymous-$i ]; do
+        ((i++))
+    done
+    TEMPLATE=0
+    if [ -d cache/gc-anonymous-0 ]; then
+        TEMPLATE=1
+        cp -a cache/gc-anonymous-0 cache/gc-anonymous-$i
+    else
+        mkdir -p cache/gc-anonymous-$i
+    fi
+    chmod 700 cache/gc-anonymous-$i
+    chrome --user-agent="pentesting-browzer-$i" --proxy-server='localhost:8080' --user-data-dir=cache/gc-anonymous-$i
+    if [ ${TEMPLATE} -eq 0 ]; then
+        rsync -a --delete cache/gc-anonymous-$1/ cache/gc-anonymous-0/
+    fi
+    rm -rf cache/gc-anonymous-$i
+}
+
+if sb_ready 16; then
+    #. Cached dump of data for reuse...
+    cd ~/cache
+    ls -d gc-anonymous-* 2>/dev/null|sed -e 's/gc-anonymous-//' > ${SB_STAGE_F}
+
+    case ${BUTTON} in
+        ${MOUSE_M}) browze& ;;
+        ${MOUSE_S}) firefox -no-remote -P belch& ;;
+    esac
+
+    DATA="$(cat ${SB_STAGE_F})"
+    sb_write_cache "${DATA}"
+fi
+sb_read_cache "-"

@@ -1,0 +1,47 @@
+#!/bin/bash
+. "${WMII_CONFPATH%%:*}/statusbar.conf"
+THEME=SW
+SYMBOL=10DA
+
+requires screen || exit 97
+
+if sb_ready 5; then
+    lck ${LOCK_SB_MODULE} on
+
+    screen -ls|awk -F '[ \t(),]+' '$0~/^\t/{print$2,$6}' > ${SB_STAGE_F}
+
+    sym='.'
+    declare -A le_menu
+    declare -A screens
+    IFS=, read -a config <<< "${SB_CONF_SCREEN[${PROFILE}]}"
+    IFS=, read -a config_all <<< "${SB_CONF_SCREEN[ALL]}"
+    for screen in ${config[@]} ${config_all[@]}; do
+        screens[${screen}]="${sym}"
+        le_menu[${screen}]="${sym}${screen}: xterm -T '${screen} (new)' -e screen -A -D -RR -S ${screen}&"
+    done
+    while read -a line; do
+        test "${line[1]}" == "attached" && sym="+" || sym="-"
+        screens[${line[0]//*./}]="${sym}"
+        le_menu[${line[0]//*./}]="${sym}${line[0]//*./}: xterm -T '${line}' -e screen -A -D -RR ${line} -S ${screen}&"
+    done < "${SB_STAGE_F}"
+
+    case ${BUTTON} in
+        ${MOUSE_R}) wm_context_menu "${le_menu[@]}" ;;
+    esac
+
+    DATA=
+    if [ ${#screens[@]} -eq 0 ]; then
+        THEME=DULL
+    else
+        for sid in ${!screens[@]}; do
+            case $(sb_state ${MOUSE_L}) in
+                0) DATA="${screens[${sid}]}${DATA}" ;;
+                1) DATA="${screens[${sid}]}${sid} ${DATA}" ;;
+            esac
+        done
+    fi
+
+    sb_write_cache "${DATA}"
+    lck ${LOCK_SB_MODULE} off
+fi
+sb_read_cache

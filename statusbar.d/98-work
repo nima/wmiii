@@ -1,0 +1,74 @@
+#!/bin/bash
+. "${WMII_CONFPATH%%:*}/statusbar.conf"
+THEME=BZ
+SYMBOL=231B #. Hourglass
+SYMBOL=0024 #. Dollar
+
+requires lck || exit 97
+profiles + DEC || exit 96
+
+l_round_time() {
+    IFS=: read -a t <<< "${1}"
+    minutes=$(( (7+${t[1]#0}) / 15 * 15 ))
+    hours=$((${t[0]#0} + (${minutes} / 60)))
+    (( minutes %= 60 ))
+    case $2 in
+        0) printf "%02d%02d" ${hours} ${minutes};;
+        1) printf "%02d.%02d" ${hours} $(( ${minutes} / 15 * 25 ));;
+    esac
+}
+
+if sb_ready 60; then
+    lck ${LOCK_SB_MODULE} on
+
+    DATA='...'
+
+    last | grep "$(whoami).*$(date +'%a %b %_d')" > ${SB_STAGE_F}
+    from="$(awk -F '[ ]+' '{i=6;if($2~/pts/){i++};last=$i};END{print$i}' ${SB_STAGE_F})"
+    if [ -n "${from}" ]; then
+        to="$(date +'%H:%M')"
+
+        #. break, defaults to 45 minutes -={
+        test -f ${SB_STAGE_F}.b || echo 45 > ${SB_STAGE_F}.b
+        B=$(cat ${SB_STAGE_F}.b)
+        : ${b:=45}
+        case ${BUTTON} in
+            ${MOUSE_M}) ((b=45)) ;;
+            ${MOUSE_U}) ((b=B+15));;
+            ${MOUSE_D}) test B -eq 0 || ((b=B-15));;
+        esac
+        if [ $b -ne $B ]; then
+            ((B=b))
+            echo $B > ${SB_STAGE_F}.b
+        fi
+        b2="$(echo $B/60|bc -l)"
+        b2=${b2%%00*}
+        #. }=-
+
+        t=$(l_round_time ${to} 0)
+        t2=$(l_round_time ${to} 1)
+
+        f=$(l_round_time ${from} 0)
+        f2=$(l_round_time ${from} 1)
+
+        total=$(echo -$f2+$t2-$b2|bc -l)
+
+        w=$(cat ${SB_STAGE_F}|wc -l)
+        case $(sb_state ${MOUSE_L}) in
+            0) DATA="$(printf "%0.2f" $total)";;
+            1) DATA="$(printf "%s..%s@%s = %0.2f/w$(date +'%W')" $f $t $b2 $total)";;
+        esac
+
+        case ${BUTTON} in
+            ${MOUSE_R})
+                declare -A le_menu
+                le_menu[copy]="copy: echo -n '-$f2+$t2-$b2'|xclip -selection p -in"
+                wm_context_menu "${le_menu[@]}"
+            ;;
+        esac
+    fi
+
+    sb_write_cache "${DATA}"
+    lck ${LOCK_SB_MODULE} off
+fi
+sb_read_cache

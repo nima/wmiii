@@ -1,0 +1,32 @@
+#!/bin/bash
+. "${WMII_CONFPATH%%:*}/statusbar.conf"
+THEME=SW
+SYMBOL=22A1 #. Box and dot
+
+requires dropbox || exit 97
+
+if sb_ready 3; then
+    lck ${LOCK_SB_MODULE} on
+
+    case ${BUTTON} in
+        ${MOUSE_M})
+            if dropbox running; then
+                dropbox start >/dev/null 2>&1
+            else
+                dropbox stop >/dev/null 2>&1
+            fi
+        ;;
+    esac
+
+    if dropbox running; then
+        DATA="offline"
+        SB_ALERT=DULL
+    else
+        DATA="online"
+        DATA=$(dropbox status|head -n1)
+    fi
+    sb_write_cache "${DATA}"
+
+    lck ${LOCK_SB_MODULE} off
+fi
+sb_read_cache

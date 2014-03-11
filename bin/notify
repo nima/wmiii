@@ -1,0 +1,4 @@
+#!/bin/bash
+echo ':: NEW MESSAGE ::' | wmiir create /lbar/!alert
+sleep 8
+wmiir remove /lbar/!alert

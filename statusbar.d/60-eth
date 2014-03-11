@@ -1,0 +1,62 @@
+#!/bin/bash
+. "${WMII_CONFPATH%%:*}/statusbar.conf"
+THEME=NW
+SYMBOL=2301 #. Electricity
+SYMBOL=22A1 #. Box and dot
+SYMBOL=04A8 #. Twirl
+
+requires lck || exit 97
+
+link() {
+    e=1
+    LINK=( $(sudo ethtool $1 2>/dev/null|awk -F '[ \t]+' '{if($2~/Link/){print $4}else if($2~/Speed:/){print $3}}') )
+    [ "${LINK[1]}" == "yes" ] && [ "${LINK[0]}" != "Unknown!" ] && e=0
+    return $e
+}
+
+if sb_ready 8; then
+    lck ${LOCK_SB_MODULE} on
+
+    IFACES=( $(find /sys/class/net/ -type l -a -not -name "lo" -printf " %f") )
+    case ${BUTTON} in
+        ${MOUSE_R})
+            declare -A ipclip
+            for iface in ${IFACES[@]}; do
+                ifaceip=$(ip ${iface})
+                ipclip[${iface}]="${iface}->P: printf ${ifaceip}|xclip -selection p -i;"
+            done
+            wm_context_menu "${ipclip[@]}";
+        ;;
+        ${MOUSE_M})
+            case $(sb_state ${BUTTON}) in
+                0) sudo wired stop  > /dev/null 2>&1;;
+                1) sudo wired start > /dev/null 2>&1;;
+            esac
+        ;;
+    esac
+
+    DATA=
+    for iface in ${IFACES[@]}; do
+        IP=$(ip ${iface})
+        if [ $(sb_state ${MOUSE_L}) -eq 1 ]; then
+            if [ -n "${IP}" ]; then
+                DATA="${DATA} ${iface}:${IP}"
+            elif link ${iface}; then
+                DATA="${DATA} ${iface}"
+            fi
+        else
+            iface_short=$(echo ${iface}|sed 's/^\(.\).*\([0-9]\+\)$/\1\2/')
+            if [ -n "${IP}" ]; then
+                DATA="${DATA} ${iface_short}"
+            elif link ${iface}; then
+                DATA="${DATA} !${iface_short}"
+            fi
+        fi
+    done
+
+    [ -n "${DATA}" ] && DATA="${DATA}" || SB_ALERT=DULL
+
+    sb_write_cache "${DATA}"
+    lck ${LOCK_SB_MODULE} off
+fi
+sb_read_cache

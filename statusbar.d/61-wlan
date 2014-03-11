@@ -1,0 +1,33 @@
+#!/bin/bash
+. "${WMII_CONFPATH%%:*}/statusbar.conf"
+THEME=NW
+
+requires wpa_supplicant || exit 97
+
+if sb_ready 10; then
+    lck ${LOCK_SB_MODULE} on
+    case ${BUTTON} in
+        ${MOUSE_M})
+            case $(sb_state ${MOUSE_M}) in
+                0) sudo wireless stop  > /dev/null 2>&1;;
+                1) sudo wireless start > /dev/null 2>&1;;
+            esac
+        ;;
+    esac
+
+    DATA=$(iwconfig wlan0|awk -F '[\t =]*' '$3~/Quality/{print $4}')
+    if [ -z "${DATA}" ]; then
+        DATA=w
+        SB_ALERT=DULL
+    else
+        if [ $(sb_state ${MOUSE_L}) -eq 1 ]; then
+            DATA="w $(ip wlan0):${DATA}"
+        else
+            DATA="w"
+        fi
+    fi
+
+    sb_write_cache "${DATA}"
+    lck ${LOCK_SB_MODULE} off
+fi
+sb_read_cache

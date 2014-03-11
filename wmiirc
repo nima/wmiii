@@ -1,0 +1,16 @@
+#!/bin/bash -f
+
+#WMII_ROOT="${WMII_CONFPATH%%:*}"
+: ${WMII_ROOT?}
+source ${WMII_ROOT}/wmii.conf
+
+mn_bootstrap;
+logger INFO "bootstrapping nomad-wmii system...complete"
+
+#. Open up /event for reading; and read line by line:
+logger INFO "loop(main)...start"
+wmiir read /event | while read line; do
+    set -- ${line}
+    mn_event_handler $*
+done
+logger INFO "loop(main)...stop"

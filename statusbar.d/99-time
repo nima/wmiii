@@ -1,0 +1,30 @@
+#!/bin/bash
+. "${WMII_CONFPATH%%:*}/statusbar.conf"
+SYMBOL=262f
+
+requires xterm || exit 97
+
+if sb_ready 30; then
+    lck ${LOCK_SB_MODULE} on
+    DATA=
+    case $(sb_state ${MOUSE_L}) in
+        1) DATA=$(printf "%02x%02x" "$(date +'%-H')" "$(date +'%-M')") ;;
+        0) DATA="$(date +'%a %-d %b %-H:%M %Y %:::z')" ;;
+    esac
+
+    sb_write_cache "${DATA}"
+
+    case ${BUTTON} in
+        ${MOUSE_R})
+            wm_context_menu \
+                "cal:xterm -e 'cal -3 && read -sn1'&"\
+                "calcurse:xterm -e calcurse&"\
+            ;;
+        ${MOUSE_M})
+            xterm -e "cal -3 && read -sn1"&
+            disown
+        ;;
+    esac
+    lck ${LOCK_SB_MODULE} off
+fi
+sb_read_cache

@@ -1,0 +1,61 @@
+#!/bin/bash
+. "${WMII_CONFPATH%%:*}/statusbar.conf"
+THEME=HW
+SYMBOL=25CE #. Bullseye
+SYMBOL=2022 #. Bullet point
+SYMBOL=2318 #. POI
+SYMBOL=2609 #. Sun symbol
+SYMBOL=2600 #. Sun with rays
+SYMBOL=2602 #. Umbrella
+SYMBOL=260E #. Telephone
+SYMBOL=2622 #. Radioactive
+SYMBOL=2623 #. Biohazard
+SYMBOL=1699 #. Grid
+SYMBOL=2736 #. Star
+
+requires lck || exit 97
+profiles - PROFILE_1 PROFILE_2 || exit 96
+profiles + PROFILE_3 PROFILE_4 || exit 96
+
+if sb_ready 16; then
+    lck ${LOCK_SB_MODULE} on
+
+    #. Cached dump of data for reuse...
+    expensive-command > ${SB_STAGE_F}
+
+    case $(sb_state ${MOUSE_L}) in
+        0) DATA="$(cheap-command-short ${SB_STAGE_F})" ;;
+        1) DATA="$(cheap-command-long ${SB_STAGE_F})" ;;
+    esac
+
+    case ${BUTTON} in
+        ${MOUSE_L}) ;;
+        ${MOUSE_M}) ;;
+        ${MOUSE_R})
+            wm_context_menu \
+                "A:     echo A;"\
+                "B:     echo B;"\
+                "C:     echo C;"\
+        ;;
+
+        ${MOUSE_S})
+            case $(sb_state ${BUTTON}) in
+                0) ... ;;
+                1) ... ;;
+            esac
+        ;;
+
+        ${MOUSE_U}) ;;
+        ${MOUSE_D}) ;;
+    esac
+
+    SB_ALERT=DULL
+    sb_escalate INFO
+    sb_escalate NORM
+    sb_escalate WARN
+    sb_escalate CRIT
+
+    sb_write_cache "${DATA}"
+    lck ${LOCK_SB_MODULE} off
+fi
+sb_read_cache "default-msg"

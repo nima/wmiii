@@ -1,0 +1,35 @@
+#!/bin/bash
+. "${WMII_CONFPATH%%:*}/statusbar.conf"
+THEME=HW
+SYMBOL=2609
+
+requires awk lck || exit 97
+
+if sb_ready 15; then
+    lck ${LOCK_SB_MODULE} on
+    shm_used_size=$(df -P ${WMII_SHM}/|awk 'END{print$5}')
+    shm_used_inode=$(df -iP ${WMII_SHM}|awk 'END{print$5}')
+    mem_used="$(awk '$1~/MemTotal/{mt=$2};$1~/MemFree/{mf=$2};END{printf("%d",100*(1-mf/mt))}' /proc/meminfo)%"
+
+    if [ $(sb_state ${MOUSE_L}) -eq 1 ]; then
+        DATA="mem:${mem_used} shm:[s:${shm_used_size} i:${shm_used_inode}]"
+    else
+        DATA="[${mem_used//%/}/${shm_used_size//%/}/${shm_used_inode//%/}]%"
+    fi
+
+    if [ ${mem_used//%/} -lt 10 ]; then
+        sb_escalate GOOD
+    fi
+
+    for shm in ${shm_used_size//%/} ${shm_used_inode//%/}; do
+        if [ ${shm} -ge 95 ]; then
+            sb_escalate CRIT
+        elif [ ${shm} -ge 85 ]; then
+            sb_escalate WARN
+        fi
+    done
+
+    sb_write_cache "${DATA}"
+    lck ${LOCK_SB_MODULE} off
+fi
+sb_read_cache

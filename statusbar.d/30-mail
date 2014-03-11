@@ -1,0 +1,35 @@
+#!/bin/bash
+. "${WMII_CONFPATH%%:*}/statusbar.conf"
+THEME=SW
+SYMBOL=270f
+
+test -f ${HOME}/mail/mbox || exit 96
+
+if sb_ready 30; then
+    lck ${LOCK_SB_MODULE} on
+    case ${BUTTON} in
+        ${MOUSE_M})
+            socat \
+                'EXEC:awk $1~/msg/{printf"popping %s...",$2}' \
+                'EXEC:getmail -v -d -r sgrc!!EXEC:wmiir write /rbar/!notice'
+        ;;
+    esac
+
+    mail=($(
+        awk \
+            '{if($0~/^Status: RO/)r++;else if($0~/^From /)t++;};END{printf("%d %d",(t-r),t)}'\
+            ${HOME}/mail/mbox
+    ))
+
+    DATA="${mail[1]}"
+    if [ ${mail[0]} -gt 0 ]; then
+        DATA="${mail[0]}/${mail[1]}"
+    else
+        SB_ALERT=DULL
+    fi
+
+    sb_write_cache "${DATA}"
+
+    lck ${LOCK_SB_MODULE} off
+fi
+sb_read_cache

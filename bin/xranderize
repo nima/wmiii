@@ -1,0 +1,57 @@
+#!/bin/bash
+CONF=~/.xranderize
+
+e=0
+if [ -e ${CONF} ]; then
+    DEVICES=( $(xrandr|awk '$2~/^connected$/{print $1}') )
+
+    declare -A placement=( [M]= [L]= [R]= [A]= [B]= )
+
+    match=0
+    configured=( $(grep -E '^[^#]' ${CONF}) )
+
+    if [ ${#DEVICES[@]} -ge 1 ]; then
+        for actual in ${DEVICES[@]}; do
+            for request in ${configured[@]}; do
+                if [ "${actual}" == "${request/*:/}" ]; then
+                    for p in ${!placement[@]}; do
+                        if [ "$p" == "${request/:*/}" ]; then
+                            placement[$p]="${request/*:/}"
+                            ((match++))
+                            break
+                        fi
+                    done
+                fi
+            done
+        done
+
+        if [ -n "${placement[M]}" ]; then
+            if [ ${#configured[@]} -eq ${match} ]; then
+                xrandr --output ${placement[M]} --auto --primary
+                for request in L R A B; do
+                    if [ -n "${placement[${request}]}" ]; then
+                        #xrandr --output ${placement[${request}]} --off
+                        xrandr --output  ${placement[${request}]} --auto
+                        case ${request} in
+                            L) xrandr --output ${placement[${request}]} --left-of  ${placement[M]} ;;
+                            R) xrandr --output ${placement[${request}]} --right-of ${placement[M]} ;;
+                            A) xrandr --output ${placement[${request}]} --above    ${placement[M]} ;;
+                            B) xrandr --output ${placement[${request}]} --below    ${placement[M]} ;;
+                        esac
+                    fi
+                done
+            else
+                echo "Error: Mismatch between detected and requested screens"
+                e=1
+            fi
+        else
+            echo "Error: Main screen has not been declared in ${CONF}"
+            e=1
+        fi
+    fi
+else
+    echo "Error: Missing ${CONF}"
+    e=1
+fi
+
+exit $e

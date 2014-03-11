@@ -1,0 +1,27 @@
+#!/bin/bash
+. "${WMII_CONFPATH%%:*}/statusbar.conf"
+THEME=SW
+SYMBOL=266a
+
+requires amixer || exit 97
+
+if sb_ready 1; then
+    lck ${LOCK_SB_MODULE} on
+
+    read vol mute <<< $(amixer get Master|awk '$1~/Mono/{print$4,$6}'|tr -d '[[]]')
+    case ${BUTTON} in
+        ${MOUSE_L}) amixer -q set Master toggle;;
+        ${MOUSE_U}) amixer -q set Master 1+ unmute;;
+        ${MOUSE_D}) amixer -q set Master 1- unmute;;
+    esac
+
+    if [ "${mute}" == "off" ]; then
+        sb_escalate CRIT
+    fi
+
+    DATA=${vol}
+    sb_write_cache "${DATA}"
+
+    lck ${LOCK_SB_MODULE} off
+fi
+sb_read_cache

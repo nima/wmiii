@@ -1,0 +1,28 @@
+#!/bin/bash
+. "${WMII_CONFPATH%%:*}/statusbar.conf"
+THEME=SW
+
+requires sudo || exit 97
+
+if sb_ready 3; then
+    lck ${LOCK_SB_MODULE} on
+    case ${BUTTON} in
+        ${MOUSE_M})
+            case $(sb_state ${BUTTON}) in
+                0) sudo ${INITD}/cups stop  > /dev/null 2>&1;;
+                1) sudo ${INITD}/cups start > /dev/null 2>&1;;
+            esac
+        ;;
+    esac
+
+    DATA=p
+    if [ $(sb_state ${MOUSE_M}) -eq 1 ]; then
+        DATA="p $(lpq|grep -vE 'is ready$|^no entries$|^Rank'|wc -l)"
+    else
+        SB_ALERT=DULL
+    fi
+
+    sb_write_cache "${DATA}"
+    lck ${LOCK_SB_MODULE} off
+fi
+sb_read_cache

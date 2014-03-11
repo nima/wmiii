@@ -1,0 +1,44 @@
+#!/bin/bash
+. "${WMII_CONFPATH%%:*}/statusbar.conf"
+THEME=SW
+SYMBOL=266b
+
+requires mocp || exit 97
+
+MOCP='mocp -S'
+
+if sb_ready 3; then
+    lck ${LOCK_SB_MODULE} on
+
+    if [ -e ${SB_10_MUZIK}/ ]; then
+        if ! pgrep -f "${MOCP}" >/dev/null; then
+            ${MOCP} >/dev/null;
+        else
+            DATA=
+            if pgrep -f "${MOCP}" >/dev/null; then
+                case ${BUTTON} in
+                    ${MOUSE_M}) mocp -G ;;
+                    ${MOUSE_U}) mocp -p -r;;
+                    ${MOUSE_D}) mocp -p -f;;
+                esac
+
+                if pgrep -f "${MOCP}" >/dev/null; then
+                    DATA="$(mocp -Q '%state'|tr '[A-Z]' '[a-z]')"
+                    if [ $(sb_state ${MOUSE_L}) -eq 1 ]; then
+                        DATA="$(mocp -Q '%state: %song'|tr '[A-Z]' '[a-z]')"
+                    fi
+                    sb_write_cache "${DATA}"
+                else
+                    SB_ALERT=DULL
+                    sb_write_cache ""
+                fi
+            else
+                DATA=starting...
+                ${MOCP} >/dev/null 2>&1
+            fi
+        fi
+    fi
+
+    lck ${LOCK_SB_MODULE} off
+fi
+sb_read_cache

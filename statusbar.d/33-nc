@@ -1,0 +1,47 @@
+#!/bin/bash
+. "${WMII_CONFPATH%%:*}/statusbar.conf"
+THEME=SW
+
+requires lck md5sum socat || exit 97
+
+if sb_ready 2; then
+    lck ${LOCK_SB_MODULE} on
+    BALLZ=/tmp/ncoming
+    i=0
+    while :; do
+        next=$(printf "%s-%03x" ${BALLZ} $i)
+        if [ -f ${next} ]; then
+            if [ ! -f ${SB_STAGE_F}.$i ]; then
+                md5sum ${next}\
+                    | sed 's/\([a-z0-9]\{3\}\).*\([a-z0-9]\{3\}\) \+.*/\1...\2/'\
+                    > ${SB_STAGE_F}.$i
+            fi
+            ((i++))
+        else
+            break
+        fi
+    done
+
+    case ${BUTTON} in
+        ${MOUSE_M})
+            next=$(printf "%s-%03x" ${BALLZ} $i)
+            socat -u 'tcp4-listen:6666' "open:${next},wronly,create,trunc"&
+            disown
+        ;;
+    esac
+
+    DATA=nc
+    if [ $i -eq 0 ]; then
+        SB_ALERT=DULL
+    else
+        PID=$(pgrep socat)
+        test -n "${PID}" || SB_ALERT=DULL
+
+        md5=$(cat ${SB_STAGE_F}.$[$i-1])
+        DATA="nc $i md5:${md5}"
+    fi
+    sb_write_cache "${DATA}"
+    lck ${LOCK_SB_MODULE} off
+fi
+
+sb_read_cache "nc"

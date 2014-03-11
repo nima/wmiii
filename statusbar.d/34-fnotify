@@ -1,0 +1,74 @@
+#!/bin/bash
+. "${WMII_CONFPATH%%:*}/statusbar.conf"
+THEME=HW
+SYMBOL=2588
+
+requires lck || exit 97
+
+loc=-1
+msg=-1
+msgi=-1
+
+rst() {
+    if [ $1 -gt 0 ]; then
+        rm -f ${SB_STAGE_F}
+    fi
+
+    if [ ! -f ${SB_STAGE_F} ]; then
+        rsync -e 'ssh -q' -q epenguin1-10.appmgmt.det.nsw.edu.au:.irssi/fnotify ${SB_STAGE_F}
+
+        loc=$(wc -l ${SB_STAGE_F}|awk '{print$1}')
+        echo ${loc} > ${SB_STAGE_F}.loc
+
+        if [ $1 -eq 2 -o ${msgi} -eq -1 ]; then
+            msgi=$(( $(wc -l ${SB_STAGE_F}|awk '{print$1}') + 1 ))
+            echo ${msgi} > ${SB_STAGE_F}.msgi
+        fi
+
+        printf '...' > ${SB_STAGE_F}.msg
+    fi
+}
+
+rst 0
+next_message() {
+    loc=$(cat ${SB_STAGE_F}.loc)
+    msgi=$(cat ${SB_STAGE_F}.msgi)
+
+    #. Update total lines-of-crap count when required:
+    if [ ${msgi} -ge ${loc} ]; then
+        rst 1
+    fi
+
+    #. If there is a new message, set it, otherwise '...' will do.
+    msg='...'
+    if [ ${msgi} -le ${loc} ]; then
+        msg=$(sed -n "${msgi}p" ${SB_STAGE_F})
+        if [ -n "${msg}" ]; then
+            msgi=$(( $msgi + 1 ))
+            echo ${msgi} > ${SB_STAGE_F}.msgi
+        fi
+    fi
+    printf '%s' "${msg}" > ${SB_STAGE_F}.msg
+
+    if [ "${msg}" != "..." ]; then
+        beeper alert
+    fi
+
+    echo "$(cat ${SB_STAGE_F}.msg) [mi:${msgi} l:${loc}]"
+}
+
+if sb_ready 10; then
+    lck ${LOCK_SB_MODULE} on
+
+    DATA=$(cat ${SB_STAGE_F}.msg)
+    case ${BUTTON} in
+        ${MOUSE_L}) DATA="$(next_message)" ;;
+        ${MOUSE_R}) rst 1; DATA="$(next_message)" ;;
+    esac
+
+    [ "${DATA}" != "..." ] || DATA="$(next_message)"
+
+    sb_write_cache "${DATA}"
+    lck ${LOCK_SB_MODULE} off
+fi
+sb_read_cache "..."

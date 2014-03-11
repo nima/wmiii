@@ -1,0 +1,12 @@
+#!/bin/bash
+#vim:ft=bash
+
+: ${WMII_ROOT?}
+. ${WMII_ROOT}/base.conf
+declare username="${1%%@*}"
+declare domain="${1##*@}"
+declare dls="$(secret $2)"
+declare rds="$3"
+shift 3
+
+exec rdesktop -KEN5 ${username:+-u "${username}"} ${domain:+-d "${domain}"} "${rds}" -p- < <(echo "${dls}") $@
