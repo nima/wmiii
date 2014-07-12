@@ -1,0 +1,77 @@
+#!/bin/bash
+
+. ${WMII_ROOT?}/base.conf
+
+function webapp() {
+    local -i e=0
+
+    local -A bidz=(
+        [sf]=$(which surf)
+        [gc]=$(which chromium || which google-chrome)
+        [ff]=$(which firefox)
+    )
+
+    local id=default
+    local appmode=0
+    local bid=gc
+    local proxy=${all_proxy-${http_proxy}}
+    local incognito=0
+
+    OPTERR=1 #. Default
+    while getopts  "a:i:b:dp:z" flag; do
+        case ${flag} in
+            a) appmode=1         ;;
+            i) id="${OPTARG}"    ;;
+            b) bid="${OPTARG}"   ;;
+            d) proxy=""          ;;
+            p) proxy="${OPTARG}" ;;
+            z) incognito=1       ;;
+            *) ((e++))           ;;
+        esac
+    done
+    shift $((OPTIND-1))
+    uri="$*"
+
+    local browser=${bidz[${bid}]}
+    case ${bid} in
+        sf)
+            if [ ${#uri} -gt 0 ]; then
+                wmiir setsid ${browser} "${uri}"
+            else
+                wmiir setsid ${browser}
+            fi
+        ;;
+        gc)
+            [ -z "${proxy}" ] || proxy="--proxy-server='${proxy}'"
+            [ ${incognito} -eq 0 ] || incognito="--incognito"
+            if [ ${#uri} -gt 0 ]; then
+                if [ ${appmode} -eq 0 ]; then
+                    wmiir setsid ${browser} ${PROXY} ${incognito} --user-data-dir=${WMII_CACHE}/${bid}-${id} --new-window "${uri}"
+                else
+                    wmiir setsid ${browser} ${PROXY} ${incognito} --user-data-dir=${WMII_CACHE}/${bid}-${id} --new-window --app="${uri}"
+                fi
+            else
+                wmiir setsid ${browser} ${PROXY} ${incognito} --user-data-dir=${WMII_CACHE}/${bid}-${id} --new-window
+            fi
+        ;;
+        ff)
+            if [ -n "${uri}" ]; then
+                wmiir setsid ${browser} -no-remote -P ${bid}-${id} "${uri}"
+            else
+                wmiir setsid ${browser} -no-remote -P ${bid}-${id}
+            fi
+        ;;
+        *)
+            logger ERR "Unsupported browser \`${browser}'"
+        ;;
+    esac
+}
+
+case $(basename $0) in
+    lastpass)
+        webapp "$@"
+    ;;
+    *)
+        webapp "$@"
+    ;;
+esac
