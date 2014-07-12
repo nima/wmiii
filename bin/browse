@@ -67,11 +67,4 @@ function webapp() {
     esac
 }
 
-case $(basename $0) in
-    lastpass)
-        webapp "$@"
-    ;;
-    *)
-        webapp "$@"
-    ;;
-esac
+webapp "$@"
