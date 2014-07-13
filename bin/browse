@@ -7,7 +7,7 @@ function webapp() {
 
     local -A bidz=(
         [sf]=$(which surf)
-        [gc]=$(which chromium || which google-chrome)
+        [gc]=$(which chromium || which google-chrome || which chrome)
         [ff]=$(which firefox)
     )
 
@@ -18,20 +18,21 @@ function webapp() {
     local incognito=0
 
     OPTERR=1 #. Default
-    while getopts  "a:i:b:dp:z" flag; do
+    while getopts  "adzi:b:p:" flag; do
         case ${flag} in
             a) appmode=1         ;;
+            d) proxy=""          ;;
+            z) incognito=1       ;;
             i) id="${OPTARG}"    ;;
             b) bid="${OPTARG}"   ;;
-            d) proxy=""          ;;
             p) proxy="${OPTARG}" ;;
-            z) incognito=1       ;;
             *) ((e++))           ;;
         esac
     done
     shift $((OPTIND-1))
-    uri="$*"
+    uri="${*:-http://randomwebsite.com/cgi-bin/random.pl}"
 
+    local opts
     local browser=${bidz[${bid}]}
     case ${bid} in
         sf)
@@ -42,17 +43,14 @@ function webapp() {
             fi
         ;;
         gc)
-            [ -z "${proxy}" ] || proxy="--proxy-server='${proxy}'"
-            [ ${incognito} -eq 0 ] || incognito="--incognito"
-            if [ ${#uri} -gt 0 ]; then
-                if [ ${appmode} -eq 0 ]; then
-                    wmiir setsid ${browser} ${PROXY} ${incognito} --user-data-dir=${WMII_CACHE}/${bid}-${id} --new-window "${uri}"
-                else
-                    wmiir setsid ${browser} ${PROXY} ${incognito} --user-data-dir=${WMII_CACHE}/${bid}-${id} --new-window --app="${uri}"
-                fi
-            else
-                wmiir setsid ${browser} ${PROXY} ${incognito} --user-data-dir=${WMII_CACHE}/${bid}-${id} --new-window
+            opts+="--user-data-dir=${WMII_CACHE}/${bid}-${id}"
+            opts+=" --new-window"
+            [ ${incognito} -eq 0 ] || opts+=" --incognito"
+            [ ${#proxy} -eq 0 ]    || opts+=" --proxy-server='${proxy}'"
+            if [ ${appmode} -eq 1 ]; then
+                opts+=" --kiosk"
             fi
+            wmiir setsid ${browser} ${opts} "${uri}"
         ;;
         ff)
             if [ -n "${uri}" ]; then
