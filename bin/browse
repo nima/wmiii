@@ -11,11 +11,12 @@ function webapp() {
         [ff]=$(which firefox)
     )
 
+    local -i appmode=0
+    local -i incognito=0
+
     local id=default
-    local appmode=0
     local bid=gc
     local proxy=${all_proxy-${http_proxy}}
-    local incognito=0
 
     OPTERR=1 #. Default
     while getopts  "adzi:b:p:" flag; do
@@ -43,7 +44,7 @@ function webapp() {
             fi
         ;;
         gc)
-            opts+="--user-data-dir=${WMII_CACHE}/${bid}-${id}"
+            opts+=" --user-data-dir=${WMII_CACHE}/${bid}-${id}"
             opts+=" --new-window"
             [ ${incognito} -eq 0 ] || opts+=" --incognito"
             [ ${#proxy} -eq 0 ]    || opts+=" --proxy-server='${proxy}'"
