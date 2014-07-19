@@ -48,7 +48,7 @@ function webapp() {
             [ ${incognito} -eq 0 ] || opts+=" --incognito"
             [ ${#proxy} -eq 0 ]    || opts+=" --proxy-server='${proxy}'"
             if [ ${appmode} -eq 1 ]; then
-                opts+=" --kiosk"
+                opts+=" --kiosk --app=${uri}"
             fi
             wmiir setsid ${browser} ${opts} "${uri}"
         ;;
