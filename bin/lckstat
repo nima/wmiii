@@ -1,5 +1,6 @@
 #!/bin/bash
-source ${WMII_ROOT-~/.wmii}/base.conf
+: ${WMII_ROOT:=${HOME}/.wmii}
+source ${WMII_ROOT:-${HOME}/.wmii}/base.conf
 
 tput sc
 while [ 0 ]; do
