@@ -2,9 +2,9 @@ export all_proxy := ${http_proxy}
 
 BIN := $(wildcard bin/*)
 
-LOCK := $(shell which lck 2>/dev/null)
+LOCK := $(shell test -s bin/lck && echo bin/lck || which lck 2>/dev/null)
 ifeq (${LOCK},)
-$(error Need lock)
+$(error Need lck)
 endif
 
 reinstall: uninstall install secure
