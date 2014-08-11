@@ -16,7 +16,7 @@ source ${WMII_ROOT}/core.conf
 : ${WMII_CACHE_SHM_PERSIST?}
 requires lck awk sed gxmessage
 
-trap cleanup SIGTERM
+trap cleanup SIGTERM SIGINT
 function cleanup() {
     printf "Cleanup..."
     for proc in wmiirc tail xbindkeys mocp; do
@@ -31,7 +31,7 @@ function cleanup() {
     printf "Done\n"
 
     printf "Syncing back cache to disk..."
-    cp ${WMII_LOG} /var/tmp/
+    cp ${WMII_LOG} /var/tmp/ 2>/dev/null
     rsync -qa --delete ${WMII_CACHE_SHM}/ ${WMII_CACHE_SHM_PERSIST?}/
     if [ $? -eq 0 ]; then
         printf "Done\n"
@@ -53,8 +53,14 @@ function cleanup() {
             rmdir ${WMII_SHM}
         fi
     done
-
     echo "]...Done"
+
+    printf "Cleaning up semaphores..."
+    for i in {101..106}; do
+        lck $i delete >/dev/null 2>&1
+        [ $? -eq 0 ] && printf '.' || printf '!'
+    done
+    printf "Done\n"
 }
 
 e=0
@@ -106,8 +112,13 @@ if [ ! -d ${WMII_SHM} ]; then
     printf "Done\n"
 
     printf "About to launch wmii..."
+    #exec 3<>0
+    #exec 0>&-
     startx -- -nolisten tcp 2>&1 | plogger ERR startx
-    printf "Done\n"
+    e=$?
+    #exec 0<>3
+    #exec 3>&-
+    [ $e -eq 0 ] && printf "Done\n" || printf "Failed\n"
     cleanup
 
     sync
