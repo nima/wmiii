@@ -32,11 +32,15 @@ function cleanup() {
 
     printf "Syncing back cache to disk..."
     cp ${WMII_LOG} /var/tmp/ 2>/dev/null
-    rsync -qa --delete ${WMII_CACHE_SHM}/ ${WMII_CACHE_SHM_PERSIST?}/
-    if [ $? -eq 0 ]; then
-        printf "Done\n"
+    if [ -d ${WMII_CACHE_SHM} ]; then
+        rsync -qa --delete ${WMII_CACHE_SHM}/ ${WMII_CACHE_SHM_PERSIST?}/
+        if [ $? -eq 0 ]; then
+            printf "Done\n"
+        else
+            printf "Failed\n"
+        fi
     else
-        printf "Failed\n"
+        printf "Skipped\n"
     fi
 
     printf "Unmounting wmii shm...["
@@ -56,7 +60,7 @@ function cleanup() {
     echo "]...Done"
 
     printf "Cleaning up semaphores..."
-    for i in {101..106}; do
+    for i in {101..106} 120; do
         lck $i delete >/dev/null 2>&1
         [ $? -eq 0 ] && printf '.' || printf '!'
     done
