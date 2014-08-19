@@ -1,5 +1,6 @@
 #!/bin/bash
 
+: ${WMII_ROOT:=${HOME}/.wmii}
 . ${WMII_ROOT?}/base.conf
 
 function webapp() {
@@ -38,9 +39,11 @@ function webapp() {
     case ${bid} in
         sf)
             if [ ${#uri} -gt 0 ]; then
-                wmiir setsid ${browser} "${uri}"
+                #wmiir setsid
+                ${browser} "${uri}"
             else
-                wmiir setsid ${browser}
+                #wmiir setsid
+                ${browser}
             fi
         ;;
         gc)
@@ -51,13 +54,16 @@ function webapp() {
             if [ ${appmode} -eq 1 ]; then
                 opts+=" --kiosk --app=${uri}"
             fi
-            wmiir setsid ${browser} ${opts} "${uri}"
+            #wmiir setsid 
+            ${browser} ${opts} "${uri}"
         ;;
         ff)
             if [ -n "${uri}" ]; then
-                wmiir setsid ${browser} -no-remote -P ${bid}-${id} "${uri}"
+                #wmiir setsid
+                ${browser} -no-remote -P ${bid}-${id} "${uri}"
             else
-                wmiir setsid ${browser} -no-remote -P ${bid}-${id}
+                #wmiir setsid
+                ${browser} -no-remote -P ${bid}-${id}
             fi
         ;;
         *)
@@ -66,4 +72,16 @@ function webapp() {
     esac
 }
 
-webapp "$@"
+e=9
+if [ "${1:0:1}" == '@' ]; then
+    cmd="$(
+        awk '$1!~/ *#/&&$2~/^'${1:1:${#1}}'$/{i=4; while(i<=NF){printf("%s ",$i);i++}}'\
+            ${WMII_ROOT?}/tags.conf
+    )"
+    exec $cmd
+else
+    webapp "$@"
+    e=$?
+fi
+
+exit $e
