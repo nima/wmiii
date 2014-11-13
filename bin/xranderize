@@ -6,17 +6,20 @@ if [ -e ${CONF} ]; then
     DEVICES=( $(xrandr|awk '$2~/^connected$/{print $1}') )
 
     declare -A placement=( [M]= [L]= [R]= [A]= [B]= )
+    declare -A rotation=(  [M]=normal [L]=normal [R]=normal [A]=normal [B]=normal )
 
     match=0
     configured=( $(grep -E '^[^#]' ${CONF}) )
 
     if [ ${#DEVICES[@]} -ge 1 ]; then
         for actual in ${DEVICES[@]}; do
-            for request in ${configured[@]}; do
-                if [ "${actual}" == "${request/*:/}" ]; then
+            for token in ${configured[@]}; do
+                IFS=: read pos dev rot <<< "${token}"
+                if [ "${actual}" == "${dev}" ]; then
                     for p in ${!placement[@]}; do
-                        if [ "$p" == "${request/:*/}" ]; then
-                            placement[$p]="${request/*:/}"
+                        if [ "$p" == "${pos}" ]; then
+                            placement[$p]="${dev}"
+                            rotation[$p]="${rot}"
                             ((match++))
                             break
                         fi
@@ -28,15 +31,15 @@ if [ -e ${CONF} ]; then
         if [ -n "${placement[M]}" ]; then
             if [ ${#configured[@]} -eq ${match} ]; then
                 xrandr --output ${placement[M]} --auto --primary
-                for request in L R A B; do
-                    if [ -n "${placement[${request}]}" ]; then
-                        #xrandr --output ${placement[${request}]} --off
-                        xrandr --output  ${placement[${request}]} --auto
-                        case ${request} in
-                            L) xrandr --output ${placement[${request}]} --left-of  ${placement[M]} ;;
-                            R) xrandr --output ${placement[${request}]} --right-of ${placement[M]} ;;
-                            A) xrandr --output ${placement[${request}]} --above    ${placement[M]} ;;
-                            B) xrandr --output ${placement[${request}]} --below    ${placement[M]} ;;
+                for rid in L R A B; do
+                    if [ -n "${placement[${rid}]}" ]; then
+                        #xrandr --output ${placement[${rid}]} --off
+                        xrandr --output  ${placement[${rid}]} --auto
+                        case ${rid} in
+                            L) xrandr --output ${placement[${rid}]} --left-of  ${placement[M]} --rotation ${rotation[${rid}]};;
+                            R) xrandr --output ${placement[${rid}]} --right-of ${placement[M]} --rotation ${rotation[${rid}]};;
+                            A) xrandr --output ${placement[${rid}]} --above    ${placement[M]} --rotation ${rotation[${rid}]};;
+                            B) xrandr --output ${placement[${rid}]} --below    ${placement[M]} --rotation ${rotation[${rid}]};;
                         esac
                     fi
                 done
