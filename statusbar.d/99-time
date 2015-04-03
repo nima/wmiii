@@ -9,7 +9,7 @@ if sb_ready 30; then
     DATA=
     case $(sb_state ${MOUSE_L}) in
         1) DATA=$(printf "%02x%02x" "$(date +'%-H')" "$(date +'%-M')") ;;
-        0) DATA="$(date +'%a %-d %b %-H:%M %Y %:::z')" ;;
+        0) DATA=${WMII_STATUSBARDATEFORMAT} ;;
     esac
 
     sb_write_cache "${DATA}"
