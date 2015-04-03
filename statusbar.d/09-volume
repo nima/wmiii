@@ -7,12 +7,12 @@ requires amixer || exit 97
 
 if sb_ready 1; then
     lck ${LOCK_SB_MODULE} on
+    read vol mute <<< "$(eval ${VOLUMESTATUS})"
 
-    read vol mute <<< $(amixer get Master|awk '$1~/Mono/{print$4,$6}'|tr -d '[[]]')
     case ${BUTTON} in
-        ${MOUSE_L}) amixer -q set Master toggle;;
-        ${MOUSE_U}) amixer -q set Master 1+ unmute;;
-        ${MOUSE_D}) amixer -q set Master 1- unmute;;
+        ${MOUSE_L}) eval ${VOLUMETOGGLE};;
+        ${MOUSE_U}) eval ${VOLUMEUP};;
+        ${MOUSE_D}) eval ${VOLUMEDOWN};;
     esac
 
     if [ "${mute}" == "off" ]; then
