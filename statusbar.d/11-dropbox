@@ -24,6 +24,9 @@ if sb_ready 3; then
     else
         DATA="online"
         DATA=$(dropbox status|head -n1)
+        if [ "${DATA}" == "Up to date" ]; then
+            DATA="ok"
+        fi
     fi
     sb_write_cache "${DATA}"
 
