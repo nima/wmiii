@@ -1,5 +1,6 @@
 #!/bin/bash -f
 
+WMII_ROOT=${HOME}/.wmii
 #WMII_ROOT="${WMII_CONFPATH%%:*}"
 : ${WMII_ROOT?}
 source ${WMII_ROOT}/wmii.conf
