@@ -17,7 +17,7 @@ if sb_ready 12; then
 
     DATA=$(
         atomicles status\
-            |awk '$6~/Alive/{if(NR>2){printf","};printf(tolower($1))}'
+            |awk '$7~/Alive/{if(NR>2){printf","};printf(tolower($1))}'
     )
 
     if [ -n "${DATA}" ]; then
