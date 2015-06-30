@@ -1,4 +1,4 @@
 #!/bin/bash
 # vim: ft=bash
 beep -l50 -f9000 -n -l50 -f2000 -n -l50 -f9000 -n -l50 -f2000 -n -l50 -f9000 -n -l50 -f2000
-/usr/bin/wmiir xwrite /rbar/!notice "label $*"
+/usr/bin/wmiir xwrite /lbar/~alerter "label $*"

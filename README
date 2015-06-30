@@ -45,8 +45,8 @@ wmiirc*          wmii main loop                            #. restart required o
 : LOOPS=<<!
 _mn_bootstrap() {
     mn_bootstrap() {
-        #. Look after the alerts statusbar lbar item:
-        _mn_sb_alerter_clear_loop() {
+        #. Look after the notifier statusbar lbar item:
+        _mn_sb_notifier_clear_loop() {
             LOOP()
         }
 
