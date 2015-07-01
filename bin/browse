@@ -34,42 +34,44 @@ function webapp() {
     shift $((OPTIND-1))
     uri="${*:-http://randomwebsite.com/cgi-bin/random.pl}"
 
-    local opts
-    local browser=${bidz[${bid}]}
-    case ${bid} in
-        sf)
-            if [ ${#uri} -gt 0 ]; then
-                #wmiir setsid
-                ${browser} "${uri}"
-            else
-                #wmiir setsid
-                ${browser}
-            fi
-        ;;
-        gc)
-            opts+=" --user-data-dir=${WMII_CACHE}/${bid}-${id}"
-            opts+=" --new-window"
-            [ ${incognito} -eq 0 ] || opts+=" --incognito"
-            [ ${#proxy} -eq 0 ]    || opts+=" --proxy-server='${proxy}'"
-            if [ ${appmode} -eq 1 ]; then
-                opts+=" --kiosk --app=${uri}"
-            fi
-            #wmiir setsid 
+    if [ $e -eq 0 ]; then
+        local opts
+        local browser=${bidz[${bid}]}
+        case ${bid} in
+            sf)
+                : Do Nothing
+            ;;
+            gc)
+                opts+=" --user-data-dir=${WMII_CACHE}/${bid}-${id}"
+                opts+=" --new-window"
+                [ ${incognito} -eq 0 ] || opts+=" --incognito"
+                [ ${#proxy} -eq 0 ]    || opts+=" --proxy-server='${proxy}'"
+                if [ ${appmode} -eq 1 ]; then
+                    opts+=" --kiosk --app=${uri}"
+                fi
+            ;;
+            ff)
+                opts+=" -P ${id} --new-window"
+                [ "${id}" == "default" ] || opts+=" --new-instance"
+            ;;
+            *)
+                logger ERR "Unsupported browser \`${browser}'"
+                e=2
+            ;;
+        esac
+    fi
+
+    if [ $e -eq 0 ]; then
+        if [ -n "${uri}" ]; then
+            #wmiir setsid
             ${browser} ${opts} "${uri}"
-        ;;
-        ff)
-            if [ -n "${uri}" ]; then
-                #wmiir setsid
-                ${browser} -P ${id} --new-instance --no-remote "${uri}"
-            else
-                #wmiir setsid
-                ${browser} -P ${id} --new-instance --no-remote
-            fi
-        ;;
-        *)
-            logger ERR "Unsupported browser \`${browser}'"
-        ;;
-    esac
+        else
+            #wmiir setsid
+            ${browser} ${opts}
+        fi
+    fi
+
+    return $e
 }
 
 e=9

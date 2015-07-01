@@ -7,6 +7,23 @@ SYMBOL=2328
 requires xsel xclip || exit 97
 
 #. Private Functions {{
+function _magic() {
+    local pdata="$(xclip -selection p -out | tr -d '\n')"
+
+    local regex
+    local cmd
+    echo "${WMII_PROFILE?} and ${WMII_ROOT}/tags.conf" > /tmp/bar
+    while read -a line; do
+        echo "${line[*]}" >> /tmp/bar
+        regex="${line[1]}"
+        cmd="${line[*]:3}"
+        echo "regex:${regex} cmd:${cmd} --> %1 = ${pdata}" >> /tmp/bar
+        if [[ ${pdata} =~ ${regex:1:-1} ]]; then
+            ${cmd//%1/${pdata}}
+        fi
+    done < <(awk '$1~/^%$/&&$3~/^'${WMII_PROFILE?}'$/{print$0}' ${WMII_ROOT}/tags.conf)
+}
+
 _xclip_out() {
     xclip -out -selection ${1:-p} 2>/dev/null
     return $?
@@ -39,7 +56,10 @@ if sb_ready 1; then
                     fi
                 done
             done
-            wm_context_menu "Clear:_xclip_clear;" "${copy[@]}"
+            wm_context_menu\
+                "Magic:_magic;"\
+                "Clear:_xclip_clear;"\
+                "${copy[@]}"
         ;;
         ${MOUSE_M})
             _xclip_out c\
