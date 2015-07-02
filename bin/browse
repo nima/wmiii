@@ -32,7 +32,7 @@ function webapp() {
         esac
     done
     shift $((OPTIND-1))
-    uri="${*:-http://randomwebsite.com/cgi-bin/random.pl}"
+    local uri="${*:-http://randomwebsite.com/cgi-bin/random.pl}"
 
     if [ $e -eq 0 ]; then
         local opts
@@ -51,7 +51,7 @@ function webapp() {
                 fi
             ;;
             ff)
-                opts+=" -P ${id} --new-window"
+                opts+=" -P ${id} --new-tab"
                 [ "${id}" == "default" ] || opts+=" --new-instance"
             ;;
             *)

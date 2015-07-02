@@ -8,20 +8,28 @@ requires xsel xclip || exit 97
 
 #. Private Functions {{
 function _magic() {
-    local pdata="$(xclip -selection p -out | tr -d '\n')"
+    local pdataraw="$(xclip -selection p -out | tr -d '\n')"
 
     local regex
     local cmd
-    echo "${WMII_PROFILE?} and ${WMII_ROOT}/tags.conf" > /tmp/bar
     while read -a line; do
-        echo "${line[*]}" >> /tmp/bar
         regex="${line[1]}"
-        cmd="${line[*]:3}"
-        echo "regex:${regex} cmd:${cmd} --> %1 = ${pdata}" >> /tmp/bar
-        if [[ ${pdata} =~ ${regex:1:-1} ]]; then
-            ${cmd//%1/${pdata}}
+        logger DEBUG "data:${line[*]}"
+        logger DEBUG "regex:${regex}"
+        if [[ ${pdataraw} =~ ${regex:1:-1} ]]; then
+            local -a pdata
+            IFS=: read -a pdata <<< "${pdataraw}"
+
+            cmd="${line[*]:3}" #. 4th token onwards is the command
+            cmd=${cmd//%0/${pdata[0]}}
+            for ((i=1; i<${#pdata[@]}; i++)); do
+                cmd=${cmd//%${i}/${pdata[$i]}}
+            done
+            logger DEBUG "cmd:${cmd}"
+
+            ${cmd}
         fi
-    done < <(awk '$1~/^%$/&&$3~/^'${WMII_PROFILE?}'$/{print$0}' ${WMII_ROOT}/tags.conf)
+    done < <(awk '$1~/^%$/&&$3~/^'${WMII_PROFILE?}'$/{print$0}' ${WMII_ROOT?}/tags.conf)
 }
 
 _xclip_out() {
