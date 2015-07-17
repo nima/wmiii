@@ -1,4 +1,18 @@
 #!/bin/bash
 # vim: ft=bash
 beep -l50 -f9000 -n -l50 -f2000 -n -l50 -f9000 -n -l50 -f2000 -n -l50 -f9000 -n -l50 -f2000
-/usr/bin/wmiir xwrite /lbar/~alerter "label $*"
+
+source ${WMII_ROOT}/user.conf
+
+msg=':)'
+
+if [ $# -gt 0 ]; then
+    printf "colors #%06x #%06x #%06x" ${COL_FG[ALERTER]} ${COL_BG[ALERTER]} ${COL_BD[ALERTER]} |
+        /usr/bin/wmiir write /lbar/~alerter
+    msg="$*"
+else
+    printf "colors #%06x #%06x #%06x" ${COL_FG[NORM]} ${COL_BG[NORM]} ${COL_BD[NORM]} |
+        /usr/bin/wmiir write /lbar/~alerter
+fi
+
+/usr/bin/wmiir xwrite /lbar/~alerter "label ${msg}"
