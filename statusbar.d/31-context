@@ -1,0 +1,24 @@
+#!/bin/bash
+. "${WMII_CONFPATH%%:*}/statusbar.conf"
+THEME=SW
+SYMBOL=2702
+
+requires xsel xclip || exit 97
+
+if [ -e ~/.wmii/context.conf ] && sb_ready 1; then
+    lck ${LOCK_SB_MODULE} on
+    case ${BUTTON} in
+        ${MOUSE_R})
+            wm_context_menu <<< "$(echo "Magic:wm_magic"; awk -F: '{printf"%s:wm_set_context %s\n",$1,$1}' ~/.wmii/context.conf)"
+        ;;
+    esac
+
+    THEME=DULL
+    context="$(wm_get_context -1)"
+    test ${#context} -eq 0 || THEME=SW
+
+    DATA="${context}"
+    sb_write_cache "${DATA}"
+    lck ${LOCK_SB_MODULE} off
+fi
+sb_read_cache
