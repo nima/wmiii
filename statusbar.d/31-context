@@ -9,7 +9,7 @@ if [ -e ~/.wmii/context.conf ] && sb_ready 1; then
     lck ${LOCK_SB_MODULE} on
     case ${BUTTON} in
         ${MOUSE_R})
-            wm_context_menu <<< "$(echo "Magic:wm_magic"; awk -F: '{printf"%s:wm_set_context %s\n",$1,$1}' ~/.wmii/context.conf)"
+            wm_context_menu <<< "$(echo "Magic:wmiii:magic"; awk -F: '{printf"%s:wm_set_context %s\n",$1,$1}' ~/.wmii/context.conf)"
         ;;
     esac
 

@@ -40,7 +40,7 @@ if sb_ready 1; then
                 done
             done
             wm_context_menu\
-                "Magic:wm_magic;"\
+                "Magic:wmiii:magic;"\
                 "Clear:_xclip_clear;"\
                 "${copy[@]}"
         ;;
