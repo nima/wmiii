@@ -11,8 +11,16 @@ if [ $# -gt 0 ]; then
         /usr/bin/wmiir write /lbar/~alerter
     msg="$*"
 else
-    printf "colors #%06x #%06x #%06x" ${COL_FG[NORM]} ${COL_BG[NORM]} ${COL_BD[NORM]} |
-        /usr/bin/wmiir write /lbar/~alerter
+    msg="$(
+        /usr/bin/wmiir read /lbar/~alerter |
+            sed -ne 's/^label \(.*\)/\1/p' |
+            tr -d '\n'
+    )"
+    if [ "${msg}" != ":)" ]; then
+        echo -ne "${msg}" | xclip -selection p -in
+        printf "colors #%06x #%06x #%06x" ${COL_FG[NORM]} ${COL_BG[NORM]} ${COL_BD[NORM]} |
+            /usr/bin/wmiir write /lbar/~alerter
+    fi
 fi
 
 /usr/bin/wmiir xwrite /lbar/~alerter "label ${msg}"

@@ -15,7 +15,15 @@ if [ -e ~/.wmii/context.conf ] && sb_ready 1; then
 
     THEME=DULL
     context="$(wm_get_context -1)"
-    test ${#context} -eq 0 || THEME=SW
+    if [ $? -eq ${CODE_SUCCESS?} ]; then
+        THEME=SW
+    else
+        if wm_set_context "$(sed -n '1s/\(.*\):.*/\1/p' ~/.wmii/context.conf)"; then
+            context="$(wm_get_context -1)"
+        else
+            context="ERROR"
+        fi
+    fi
 
     DATA="${context}"
     sb_write_cache "${DATA}"
