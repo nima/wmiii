@@ -20,6 +20,7 @@ else
         echo -ne "${msg}" | xclip -selection p -in
         printf "colors #%06x #%06x #%06x" ${COL_FG[NORM]} ${COL_BG[NORM]} ${COL_BD[NORM]} |
             /usr/bin/wmiir write /lbar/~alerter
+        msg=':)'
     fi
 fi
 
