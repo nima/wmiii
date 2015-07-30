@@ -1,0 +1,58 @@
+#!/bin/bash
+. "${WMII_CONFPATH%%:*}/statusbar.conf"
+THEME=SW
+SYMBOL=2702
+
+profiles + AWS || exit 96
+requires xmlstarlet || exit 97
+
+if sb_ready 60; then
+    lck ${LOCK_SB_MODULE} on
+
+    e=0
+    if [ ! -e ${SB_STAGE_F}.tickets -o ! -e ${SB_STAGE_F}.links ] || ! sb_urgent; then
+        tt > ${SB_STAGE_F}.dump
+
+        jq -c '.[]|.tt+"/"+.cr+"@"+(.ta|keys|join(","))+":wmiii:magic "+.li' < "${SB_STAGE_F}.dump" |
+            tr -d '"' > ${SB_STAGE_F}.staged && mv ${SB_STAGE_F}.staged ${SB_STAGE_F}.tickets
+        jq -c '.[]|.li' < "${SB_STAGE_F}.dump" |
+            tr -d '"' > ${SB_STAGE_F}.staged && mv ${SB_STAGE_F}.staged ${SB_STAGE_F}.links
+        e=0
+    fi
+
+    if [ $e -eq ${CODE_SUCCESS?} ]; then
+        case ${BUTTON} in
+            ${MOUSE_R})
+                declare -a data
+                while read line; do
+                    data+=( "${line};" )
+                done < ${SB_STAGE_F}.tickets
+                wm_context_menu "${data[@]}"
+            ;;
+            ${MOUSE_L}) wmiii:magic "https://tt.amazon.com/search?cc_email=${USER}&status=Assigned;Researching;Work+In+Progress;Pending&search=1";;
+            ${MOUSE_M}) wmiii:magic "$(cat ${SB_STAGE_F}.links)";;
+        esac
+
+        team=$(jq -c 'select(.[]|.ta["team"]==true)' < ${SB_STAGE_F}.dump | wc -l)
+        sev1=$(jq -c 'select(.[]|.ta["sev1"]==true)' < ${SB_STAGE_F}.dump | wc -l)
+        sev2=$(jq -c 'select(.[]|.ta["sev2"]==true)' < ${SB_STAGE_F}.dump | wc -l)
+        mine=$(jq -c 'select(.[]|.ta["mine"]==true)' < ${SB_STAGE_F}.dump | wc -l)
+        total=$(jq -c '.[]' < ${SB_STAGE_F}.dump | wc -l)
+
+        if [ ${sev1} -gt 0 ]; then
+            sb_escalate CRIT
+        elif [ ${sev2} -gt 0 ]; then
+            sb_escalate WARN
+        elif [ ${mine} -gt 0 ]; then
+            sb_escalate NOTE
+        fi
+
+        DATA="tt:${mine}/${team}/${total}"
+    else
+        sb_escalate CRIT
+        DATA="tt:no-data"
+    fi
+    sb_write_cache "${DATA}"
+    lck ${LOCK_SB_MODULE} off
+fi
+sb_read_cache
