@@ -1,5 +1,16 @@
 #!/bin/bash
-CONF=~/.xranderize
+
+#. Configuration File -={
+#. Tokens are dellimited by spaces
+#. Each tokens defines one screen
+#. Each token itself contains 3 subtokens:
+#.     1. Relative Position: [M]ain (mandatory), [L]eft-of, [R]right-of, [A]bove, [B]elow
+#.     2. Xrandr Screen ID
+#.     3. Screen rotation: normal, left, right or inverted
+#. Example:
+#.     R:VGA1:normal M:HDMI2:normal
+CONF=${1:-~/.xranderize}
+#. }=-
 
 e=0
 if [ -e ${CONF} ]; then
